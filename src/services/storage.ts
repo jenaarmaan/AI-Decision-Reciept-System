@@ -24,6 +24,7 @@ export const initDb = async () => {
       ai_output TEXT NOT NULL,
       retrieval_sources TEXT,
       reasoning_summary TEXT,
+      decision_confidence REAL,
       approval_status TEXT
     );
   `);
@@ -36,8 +37,8 @@ export const saveReceipt = async (receipt: DecisionReceipt) => {
     INSERT INTO receipts (
       id, timestamp, requester_context, model_metadata, 
       user_input, interpreted_intent, system_instructions, ai_output, 
-      retrieval_sources, reasoning_summary, approval_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      retrieval_sources, reasoning_summary, decision_confidence, approval_status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   await db!.run(queryText, [
@@ -50,7 +51,8 @@ export const saveReceipt = async (receipt: DecisionReceipt) => {
     receipt.systemInstructions,
     receipt.aiOutput,
     receipt.retrievalSources ? JSON.stringify(receipt.retrievalSources) : null,
-    receipt.reasoningSummary || null,
+    receipt.reasoningSummary,
+    receipt.decisionConfidence,
     receipt.approvalStatus || 'PENDING'
   ]);
 };
@@ -72,6 +74,7 @@ export const getReceiptById = async (id: string): Promise<DecisionReceipt | null
     aiOutput: row.ai_output,
     retrievalSources: row.retrieval_sources ? JSON.parse(row.retrieval_sources) : null,
     reasoningSummary: row.reasoning_summary,
+    decisionConfidence: row.decision_confidence,
     approvalStatus: row.approval_status
   } as DecisionReceipt;
 };

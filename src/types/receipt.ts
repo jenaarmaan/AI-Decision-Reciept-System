@@ -25,6 +25,7 @@ export interface DecisionReceipt {
     systemInstructions: string;
     aiOutput: string;
     retrievalSources?: RetrievalSource[];
-    reasoningSummary?: string;
+    reasoningSummary: string; // Required for Phase 3
+    decisionConfidence: number; // New in Phase 3
     approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
