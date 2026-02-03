@@ -1,13 +1,22 @@
 import * as sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
+import fs from 'fs'; // Added fs import
 import { DecisionReceipt } from '../types/receipt';
+
+// Support Render persistent disk or local development
+const dataDir = process.env.RENDER ? '/opt/render/project/src/data' : path.join(__dirname, '../../');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const DATABASE_PATH = path.join(dataDir, 'adrs.db');
 
 let db: Database | null = null;
 
 export const initDb = async () => {
   db = await open({
-    filename: path.join(process.cwd(), 'adrs.db'),
+    filename: DATABASE_PATH, // Updated to use DATABASE_PATH
     driver: sqlite3.Database
   });
 

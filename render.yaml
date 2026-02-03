@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: adrs-system
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+    disk:
+      name: adrs-db-disk
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1

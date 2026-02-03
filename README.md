@@ -7,6 +7,12 @@
   [![Express](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)](https://expressjs.com/)
   [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
   [![Audit Ready](https://img.shields.io/badge/Audit-Ready-green?style=for-the-badge)](https://github.com/jenaarmaan/AI-Decision-Reciept-System)
+  
+  <br/>
+
+  [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jenaarmaan/AI-Decision-Reciept-System)
+  
+  **[LIVE PREVIEW (Temporary)](https://giant-candies-switch.loca.lt)**
 </div>
 
 ---
