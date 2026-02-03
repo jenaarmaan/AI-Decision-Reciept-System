@@ -1,0 +1,19 @@
+# Node dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Runtime databases (VERY IMPORTANT)
+*.db
+
+# Logs
+*.log
+
+# Build outputs
+dist/
+build/
+
+# OS / Editor noise
+.DS_Store
+Thumbs.db

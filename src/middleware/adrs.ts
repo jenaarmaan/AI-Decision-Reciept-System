@@ -1,0 +1,92 @@
+import { v4 as uuidv4 } from 'uuid';
+import { DecisionReceipt } from '../types/receipt';
+import { saveReceipt } from '../services/storage';
+
+export interface InferenceParams {
+    userInput: string;
+    systemInstructions: string;
+    modelMetadata: {
+        name: string;
+        version: string;
+        provider: string;
+        configuration: Record<string, any>;
+    };
+    requesterContext: {
+        userId?: string;
+        systemId: string;
+        correlationId: string;
+    };
+}
+
+/**
+ * Mock Intent Extraction
+ * In a real system, this would call a cheap LLM or a classifier.
+ */
+const extractIntent = async (input: string): Promise<string> => {
+    // Simple rule-based mock for intent extraction
+    if (input.toLowerCase().includes('what') || input.toLowerCase().includes('how')) {
+        return 'INFORMATION_QUERY';
+    }
+    return 'GENERAL_INTERACTION';
+};
+
+/**
+ * Mock Retrieval
+ * In a real system, this would trace vector DB results.
+ */
+const mockRetrieval = async (input: string): Promise<any[]> => {
+    return [
+        {
+            id: 'doc_001',
+            uri: 'https://kb.internal/adrs-primitives',
+            snippet: 'ADRS primitives include Receipts, Context, and Traces.',
+            confidenceScore: 0.95,
+            metadata: { source: 'Internal Knowledge Base' }
+        },
+        {
+            id: 'doc_002',
+            uri: 'https://governance.org/standards',
+            snippet: 'AI decisions must be logged as auditable transactions.',
+            confidenceScore: 0.88,
+            metadata: { source: 'Regulatory Specs' }
+        }
+    ];
+};
+
+/**
+ * ADRS Wrapper for AI Inference
+ * This simulates a call to an AI model and generates a Decision Receipt.
+ */
+export const executeInferenceWithReceipt = async (
+    params: InferenceParams,
+    mockAiCall: (input: string, instructions: string) => Promise<string>
+): Promise<{ output: string; receiptId: string }> => {
+    const receiptId = uuidv4();
+    const timestamp = new Date().toISOString();
+
+    // Phase 2: Context Enrichment
+    const interpretedIntent = await extractIntent(params.userInput);
+    const retrievalSources = await mockRetrieval(params.userInput);
+
+    // 1. Call the AI Model (mocked for now)
+    const aiOutput = await mockAiCall(params.userInput, params.systemInstructions);
+
+    // 2. Construct the Decision Receipt
+    const receipt: DecisionReceipt = {
+        id: receiptId,
+        timestamp,
+        requesterContext: params.requesterContext,
+        modelMetadata: params.modelMetadata,
+        userInput: params.userInput,
+        interpretedIntent,
+        systemInstructions: params.systemInstructions,
+        aiOutput,
+        retrievalSources,
+        approvalStatus: 'PENDING',
+    };
+
+    // 3. Persist the Receipt
+    await saveReceipt(receipt);
+
+    return { output: aiOutput, receiptId };
+};
