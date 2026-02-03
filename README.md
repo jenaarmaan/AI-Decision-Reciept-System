@@ -12,6 +12,12 @@
 
   [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jenaarmaan/AI-Decision-Reciept-System)
   
+  <br/>
+  
+  [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://adrs-intelligence.streamlit.app)
+  
+  **[LIVE APP (Streamlit)](https://share.streamlit.io/)** — *Deploy your fork to see it live!*
+  
   **[LIVE PREVIEW (Temporary)](https://salty-bears-drum.loca.lt)**
 </div>
 
