@@ -115,5 +115,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 <div align="center">
-  Built with ❤️ by <b>Antigravity AI</b> for the 50 Day AI Challenge.
+  Built with ❤️ by <b> Armaan Jena </b> using <b>Antigravity AI</b> for the 50 Day AI Challenge.
 </div>
