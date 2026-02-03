@@ -110,3 +110,23 @@ export const listReceipts = async (limit: number = 50): Promise<DecisionReceipt[
     reviewMetadata: row.review_metadata ? JSON.parse(row.review_metadata) : null
   }));
 };
+
+export const getAllReceipts = async (): Promise<DecisionReceipt[]> => {
+  if (!db) await initDb();
+  const rows = await db!.all('SELECT * FROM receipts');
+  return rows.map(row => ({
+    id: row.id,
+    timestamp: row.timestamp,
+    requesterContext: JSON.parse(row.requester_context),
+    modelMetadata: JSON.parse(row.model_metadata),
+    userInput: row.user_input,
+    interpretedIntent: row.interpreted_intent,
+    systemInstructions: row.system_instructions,
+    aiOutput: row.ai_output,
+    retrievalSources: row.retrieval_sources ? JSON.parse(row.retrieval_sources) : null,
+    reasoningSummary: row.reasoning_summary,
+    decisionConfidence: row.decision_confidence,
+    approvalStatus: row.approval_status,
+    reviewMetadata: row.review_metadata ? JSON.parse(row.review_metadata) : null
+  }));
+};

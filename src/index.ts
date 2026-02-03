@@ -1,7 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { initDb, getReceiptById, updateReceiptReview, listReceipts } from './services/storage';
+import { initDb, getReceiptById, updateReceiptReview, listReceipts, getAllReceipts } from './services/storage';
 import { executeInferenceWithReceipt } from './middleware/adrs';
+import * as intelligence from './services/intelligence';
 
 dotenv.config();
 
@@ -146,6 +147,49 @@ ${receipt.reasoningSummary}
 
         res.header('Content-Type', 'text/markdown');
         res.send(report);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/analytics/trends
+ * Longitudinal intent volume analysis.
+ */
+app.get('/api/analytics/trends', checkRole(['AUDITOR', 'ADMIN']), async (req, res) => {
+    try {
+        const receipts = await getAllReceipts();
+        const trends = intelligence.analyzeTrends(receipts);
+        res.json(trends);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/analytics/drift
+ * Cross-model version performance comparison.
+ */
+app.get('/api/analytics/drift', checkRole(['AUDITOR', 'ADMIN']), async (req, res) => {
+    try {
+        const receipts = await getAllReceipts();
+        const drift = intelligence.detectDrift(receipts);
+        res.json(drift);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/analytics/risks
+ * Surfaces low-confidence/anomalous decisions.
+ */
+app.get('/api/analytics/risks', checkRole(['AUDITOR', 'ADMIN']), async (req, res) => {
+    try {
+        const threshold = req.query.threshold ? parseFloat(req.query.threshold as string) : 0.5;
+        const receipts = await getAllReceipts();
+        const anomalies = intelligence.detectAnomalies(receipts, threshold);
+        res.json(anomalies);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
