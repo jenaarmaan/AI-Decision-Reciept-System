@@ -28,4 +28,11 @@ export interface DecisionReceipt {
     reasoningSummary: string; // Required for Phase 3
     decisionConfidence: number; // New in Phase 3
     approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    reviewMetadata?: {
+        reviewerId: string;
+        reviewedAt: string;
+        notes: string;
+        overrideApplied: boolean;
+        previousOutput?: string;
+    };
 }

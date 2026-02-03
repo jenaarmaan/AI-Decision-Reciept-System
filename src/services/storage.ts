@@ -25,7 +25,8 @@ export const initDb = async () => {
       retrieval_sources TEXT,
       reasoning_summary TEXT,
       decision_confidence REAL,
-      approval_status TEXT
+      approval_status TEXT,
+      review_metadata TEXT
     );
   `);
 };
@@ -37,8 +38,9 @@ export const saveReceipt = async (receipt: DecisionReceipt) => {
     INSERT INTO receipts (
       id, timestamp, requester_context, model_metadata, 
       user_input, interpreted_intent, system_instructions, ai_output, 
-      retrieval_sources, reasoning_summary, decision_confidence, approval_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      retrieval_sources, reasoning_summary, decision_confidence, approval_status,
+      review_metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   await db!.run(queryText, [
@@ -53,7 +55,8 @@ export const saveReceipt = async (receipt: DecisionReceipt) => {
     receipt.retrievalSources ? JSON.stringify(receipt.retrievalSources) : null,
     receipt.reasoningSummary,
     receipt.decisionConfidence,
-    receipt.approvalStatus || 'PENDING'
+    receipt.approvalStatus || 'PENDING',
+    receipt.reviewMetadata ? JSON.stringify(receipt.reviewMetadata) : null
   ]);
 };
 
@@ -75,6 +78,35 @@ export const getReceiptById = async (id: string): Promise<DecisionReceipt | null
     retrievalSources: row.retrieval_sources ? JSON.parse(row.retrieval_sources) : null,
     reasoningSummary: row.reasoning_summary,
     decisionConfidence: row.decision_confidence,
-    approvalStatus: row.approval_status
+    approvalStatus: row.approval_status,
+    reviewMetadata: row.review_metadata ? JSON.parse(row.review_metadata) : null
   } as DecisionReceipt;
+};
+
+export const updateReceiptReview = async (id: string, status: 'APPROVED' | 'REJECTED', reviewData: any) => {
+  if (!db) await initDb();
+  await db!.run(
+    'UPDATE receipts SET approval_status = ?, review_metadata = ? WHERE id = ?',
+    [status, JSON.stringify(reviewData), id]
+  );
+};
+
+export const listReceipts = async (limit: number = 50): Promise<DecisionReceipt[]> => {
+  if (!db) await initDb();
+  const rows = await db!.all('SELECT * FROM receipts ORDER BY timestamp DESC LIMIT ?', [limit]);
+  return rows.map(row => ({
+    id: row.id,
+    timestamp: row.timestamp,
+    requesterContext: JSON.parse(row.requester_context),
+    modelMetadata: JSON.parse(row.model_metadata),
+    userInput: row.user_input,
+    interpretedIntent: row.interpreted_intent,
+    systemInstructions: row.system_instructions,
+    aiOutput: row.ai_output,
+    retrievalSources: row.retrieval_sources ? JSON.parse(row.retrieval_sources) : null,
+    reasoningSummary: row.reasoning_summary,
+    decisionConfidence: row.decision_confidence,
+    approvalStatus: row.approval_status,
+    reviewMetadata: row.review_metadata ? JSON.parse(row.review_metadata) : null
+  }));
 };

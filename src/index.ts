@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { initDb, getReceiptById } from './services/storage';
+import { initDb, getReceiptById, updateReceiptReview, listReceipts } from './services/storage';
 import { executeInferenceWithReceipt } from './middleware/adrs';
 
 dotenv.config();
@@ -16,6 +16,19 @@ initDb().then(() => {
 }).catch(err => {
     console.error('Failed to initialize database:', err);
 });
+
+/**
+ * RBAC Middleware
+ */
+const checkRole = (roles: string[]) => {
+    return (req: any, res: any, next: any) => {
+        const userRole = req.headers['x-role'];
+        if (!userRole || !roles.includes(userRole)) {
+            return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
+        }
+        next();
+    };
+};
 
 /**
  * POST /api/inference
@@ -56,6 +69,83 @@ app.get('/api/receipts/:id', async (req, res) => {
             return res.status(404).json({ error: 'Receipt not found' });
         }
         res.json(receipt);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * POST /api/receipts/:id/review
+ * Human override/approval endpoint.
+ */
+app.post('/api/receipts/:id/review', checkRole(['ADMIN']), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, notes, reviewerId } = req.body;
+
+        if (!['APPROVED', 'REJECTED'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid review status' });
+        }
+
+        const reviewData = {
+            reviewerId,
+            reviewedAt: new Date().toISOString(),
+            notes,
+            overrideApplied: true
+        };
+
+        await updateReceiptReview(id, status, reviewData);
+        res.json({ message: 'Review applied successfully', receiptId: id, status });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/audit/dashboard
+ * List all receipts for audit review.
+ */
+app.get('/api/audit/dashboard', checkRole(['AUDITOR', 'ADMIN']), async (req, res) => {
+    try {
+        const receipts = await listReceipts();
+        res.json(receipts);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/receipts/:id/export
+ * Export receipt as a governance report (Markdown).
+ */
+app.get('/api/receipts/:id/export', checkRole(['AUDITOR', 'ADMIN']), async (req, res) => {
+    try {
+        const receipt = await getReceiptById(req.params.id);
+        if (!receipt) return res.status(404).json({ error: 'Receipt not found' });
+
+        const report = `
+# AI Decision Receipt Report
+- **ID**: ${receipt.id}
+- **Timestamp**: ${receipt.timestamp}
+- **Status**: ${receipt.approvalStatus}
+- **Confidence**: ${receipt.decisionConfidence}
+
+## User Input
+> ${receipt.userInput}
+
+## AI Output
+${receipt.aiOutput}
+
+## Justification
+${receipt.reasoningSummary}
+
+## Governance Metadata
+- **Interpreted Intent**: ${receipt.interpretedIntent}
+- **Reviewer Logs**: ${receipt.reviewMetadata ? JSON.stringify(receipt.reviewMetadata) : 'NO_REVIEW_YET'}
+    `.trim();
+
+        res.header('Content-Type', 'text/markdown');
+        res.send(report);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
