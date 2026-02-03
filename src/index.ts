@@ -19,6 +19,24 @@ initDb().then(() => {
 });
 
 /**
+ * Root Route - Discoverability
+ */
+app.get('/', (req, res) => {
+    res.send(`
+        <div style="font-family: sans-serif; padding: 40px; line-height: 1.6;">
+            <h1>🛡️ ADRS API is Live</h1>
+            <p>The AI Decision Receipt System is functioning correctly.</p>
+            <h3>Available Endpoints:</h3>
+            <ul>
+                <li><strong>Dashboard</strong>: <code>/api/audit/dashboard</code> (Header <code>x-role: ADMIN</code> required)</li>
+                <li><strong>Recent Inference</strong>: <code>/api/inference</code> (POST)</li>
+            </ul>
+            <p>See the <a href="https://github.com/jenaarmaan/AI-Decision-Reciept-System">GitHub README</a> for full documentation.</p>
+        </div>
+    `);
+});
+
+/**
  * RBAC Middleware
  */
 const checkRole = (roles: string[]) => {
