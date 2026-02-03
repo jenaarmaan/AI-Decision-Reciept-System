@@ -12,7 +12,7 @@
 
   [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jenaarmaan/AI-Decision-Reciept-System)
   
-  **[LIVE PREVIEW (Temporary)](https://eight-ants-share.loca.lt)**
+  **[LIVE PREVIEW (Temporary)](https://salty-bears-drum.loca.lt)**
 </div>
 
 ---
