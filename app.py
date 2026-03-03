@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import sqlite3
 import plotly.express as px
+from src.safety import detector
 
 # --- DATABASE SETUP ---
 def init_db():
@@ -21,9 +22,20 @@ def init_db():
             confidence REAL,
             status TEXT,
             metadata TEXT,
-            review_metadata TEXT
+            review_metadata TEXT,
+            safety_risk_score REAL,
+            safety_status TEXT,
+            safety_flags TEXT
         )
     ''')
+    # Use ALTER TABLE for existing databases
+    try:
+        c.execute("ALTER TABLE receipts ADD COLUMN safety_risk_score REAL DEFAULT 0.0")
+        c.execute("ALTER TABLE receipts ADD COLUMN safety_status TEXT DEFAULT 'SAFE'")
+        c.execute("ALTER TABLE receipts ADD COLUMN safety_flags TEXT DEFAULT '[]'")
+    except sqlite3.OperationalError:
+        pass # Columns already exist
+    
     conn.commit()
     conn.close()
 
@@ -31,12 +43,14 @@ def save_receipt(receipt):
     conn = sqlite3.connect('adrs_st.db')
     c = conn.cursor()
     c.execute('''
-        INSERT INTO receipts (id, timestamp, user_input, intent, ai_output, reasoning, confidence, status, metadata)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO receipts (id, timestamp, user_input, intent, ai_output, reasoning, confidence, status, metadata, 
+                        safety_risk_score, safety_status, safety_flags)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         receipt['id'], receipt['timestamp'], receipt['user_input'], 
         receipt['intent'], receipt['ai_output'], receipt['reasoning'], 
-        receipt['confidence'], receipt['status'], json.dumps(receipt['metadata'])
+        receipt['confidence'], receipt['status'], json.dumps(receipt['metadata']),
+        receipt['safety']['risk_score'], receipt['safety']['status'], json.dumps(receipt['safety']['flags'])
     ))
     conn.commit()
     conn.close()
@@ -67,10 +81,20 @@ def generate_reasoning(text, intent):
     return "The system processed a general interaction using standard model weights and safety filters."
 
 def simulate_inference(user_input):
+    # SAFETY LAYER (Integrated Prototype)
+    safety_report = detector.analyze_input(user_input)
+    
     intent = extract_intent(user_input)
-    ai_output = f"This is a simulated AI response for: {user_input}"
-    reasoning = generate_reasoning(user_input, intent)
-    confidence = 0.85 if intent == "INFORMATION_QUERY" else 0.92
+    
+    # If high risk, sanitize or block (for prototype we just tag it)
+    if safety_report['status'] == 'DANGEROUS':
+        ai_output = "🚨 [SECURITY BLOCK] The system detected a potential Prompt Injection attack. High-risk instructions have been intercepted."
+        reasoning = "The ADRS Safety Middleware identified patterns consistent with unauthorized instruction overrides or jailbreak attempts. Action blocked to prevent data leakage or tool misuse."
+        confidence = 0.0
+    else:
+        ai_output = f"This is a simulated AI response for: {user_input}"
+        reasoning = generate_reasoning(user_input, intent)
+        confidence = 0.85 if intent == "INFORMATION_QUERY" else 0.92
     
     receipt = {
         "id": str(uuid.uuid4()),
@@ -81,7 +105,8 @@ def simulate_inference(user_input):
         "reasoning": reasoning,
         "confidence": confidence,
         "status": "PENDING",
-        "metadata": {"model": "gpt-4-mock", "version": "1.0"}
+        "metadata": {"model": "gpt-4-mock", "version": "1.0"},
+        "safety": safety_report
     }
     return receipt
 
@@ -172,13 +197,37 @@ elif page == "Security Analytics":
             st.plotly_chart(fig)
             
         st.markdown("---")
-        st.subheader("🚩 Risk Indicators (Low Confidence Alerts)")
-        anomalies = df[df['confidence'] < 0.6]
-        if not anomalies.empty:
-            st.error(f"Found {len(anomalies)} anomalous decisions requiring immediate audit.")
-            st.table(anomalies[['id', 'user_input', 'confidence']])
-        else:
-            st.success("No critical drift or anomalies detected in the current sequence.")
+        st.subheader("🚩 Risk Indicators (Low Confidence & Security Alerts)")
+        col_risk1, col_risk2 = st.columns(2)
+        
+        with col_risk1:
+            st.write("**Recent Anomalies (Confidence < 0.6)**")
+            anomalies = df[df['confidence'] < 0.6]
+            if not anomalies.empty:
+                st.table(anomalies[['id', 'user_input', 'confidence']])
+            else:
+                st.success("No critical drift detected.")
+                
+        with col_risk2:
+            st.write("**Prompt Injection Risks**")
+            injections = df[df['safety_risk_score'] > 0.3]
+            if not injections.empty:
+                st.warning(f"Found {len(injections)} suspicious inputs.")
+                st.table(injections[['id', 'user_input', 'safety_risk_score', 'safety_status']])
+            else:
+                st.success("No injection attempts detected.")
+                
+        if not df.empty:
+            st.subheader("Safety Pattern Distribution")
+            # Flatten safety flags for visualization
+            all_flags = []
+            for flags_json in df['safety_flags']:
+                all_flags.extend(json.loads(flags_json))
+            
+            if all_flags:
+                flags_df = pd.DataFrame(all_flags, columns=['flag'])
+                fig_flags = px.bar(flags_df['flag'].value_counts(), labels={'value': 'Count', 'index': 'Pattern Type'})
+                st.plotly_chart(fig_flags)
 
 st.sidebar.markdown("---")
 st.sidebar.info(f"Built by **Armaan Jena**")
